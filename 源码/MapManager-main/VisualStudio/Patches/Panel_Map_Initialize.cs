@@ -110,6 +110,10 @@
             if (arrow == null)
                 return;
 
+            // The player icon's rotation uses an upward-facing image as its forward axis.
+            // Rotate the right-facing glyph to that axis while inheriting the player's heading.
+            arrow.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+
             if (playerArrowTexture == null)
             {
                 playerArrowTexture = new Texture2D(32, 32, TextureFormat.RGBA32, false)
