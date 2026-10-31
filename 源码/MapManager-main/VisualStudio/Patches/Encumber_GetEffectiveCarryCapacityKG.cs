@@ -76,4 +76,36 @@ namespace MapManager
             return false;
         }
     }
+
+    [HarmonyPatch(typeof(Encumber), nameof(Encumber.GetHourlyCalorieBurnFromWeight))]
+    internal static class Encumber_LimitWeightCalorieBurn
+    {
+        // Keep the weight-related hunger cost at no more than the normal 30 kg load.
+        private const float NormalCarryWeightKG = 30f;
+        private static bool loggedFirstCall;
+        private static bool loggedFirstLimit;
+
+        private static void Postfix(Encumber __instance, ref float __result)
+        {
+            if (!Settings.Instance.EnableCustomCarryWeight)
+                return;
+
+            float maximumWeightBurn = Mathf.Max(0f, __instance.m_HourlyCalorieBurnPerKG * NormalCarryWeightKG);
+            if (!loggedFirstCall)
+            {
+                MelonLogger.Msg($"CarryDiag weight hunger: initial={__result:F2}/h, cap={maximumWeightBurn:F2}/h");
+                loggedFirstCall = true;
+            }
+
+            if (__result > maximumWeightBurn)
+            {
+                if (!loggedFirstLimit)
+                {
+                    MelonLogger.Msg($"CarryDiag weight hunger capped: {__result:F2}/h -> {maximumWeightBurn:F2}/h");
+                    loggedFirstLimit = true;
+                }
+                __result = maximumWeightBurn;
+            }
+        }
+    }
 }
