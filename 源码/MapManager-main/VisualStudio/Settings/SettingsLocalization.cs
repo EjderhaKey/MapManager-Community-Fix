@@ -4,10 +4,13 @@ namespace MapManager
 {
 	internal static class SettingsLocalization
 	{
+		private static DisplayLanguage currentLanguage = DisplayLanguage.Chinese;
+
 		private static readonly Dictionary<string, string> ChineseText = new()
 		{
 			["Language Settings"] = "语言设置",
 			["Display Language"] = "界面语言",
+			["Restart the game to apply language changes."] = "重启游戏后应用语言更改。",
 			["Map Settings"] = "地图设置",
 			["Enable Map Arrow"] = "显示玩家位置箭头",
 			["If enabled, will show where the player is on the map with an arrow"] = "开启后，在地图上显示玩家位置箭头。",
@@ -34,11 +37,13 @@ namespace MapManager
 
 		internal static string Translate(string text)
 		{
-			if (Settings.Instance.Language == DisplayLanguage.Chinese && ChineseText.TryGetValue(text, out string translated))
+			if (currentLanguage == DisplayLanguage.Chinese && ChineseText.TryGetValue(text, out string translated))
 				return translated;
 
 			return text;
 		}
+
+		internal static void SetLanguage(DisplayLanguage language) => currentLanguage = language;
 	}
 
 	[HarmonyPatch(typeof(NameAttribute), "get_Name")]

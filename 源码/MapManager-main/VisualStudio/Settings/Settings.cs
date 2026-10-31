@@ -11,9 +11,11 @@ namespace MapManager
 	internal class Settings : JsonModSettings
 	{
 		internal static Settings Instance { get; } = new();
+		private DisplayLanguage confirmedLanguage;
 
 		[Section("Language Settings")]
 		[Name("Display Language")]
+		[Description("Restart the game to apply language changes.")]
 		[Choice("English", "简体中文")]
 		public DisplayLanguage Language = DisplayLanguage.Chinese;
 
@@ -69,15 +71,26 @@ namespace MapManager
 
 		internal static void OnLoad()
 		{
+			Instance.confirmedLanguage = Instance.Language;
+			SettingsLocalization.SetLanguage(Instance.Language);
 			Instance.AddToModSettings($"{BuildInfo.GUIName}");
 			Instance.RefreshGUI();
 		}
 
-		protected override void OnChange(FieldInfo field, object oldValue, object newValue)
+		protected override void OnConfirm()
 		{
-			base.OnChange(field, oldValue, newValue);
-			if (field.Name == nameof(Language))
-				RefreshGUI();
+			base.OnConfirm();
+			Save();
+
+			if (Language != confirmedLanguage)
+			{
+				confirmedLanguage = Language;
+				string message = Language == DisplayLanguage.Chinese
+					? "语言设置已保存。下次启动游戏时生效。"
+					: "Language saved. It will take effect the next time you start the game.";
+				InterfaceManager.GetPanel<Panel_Confirmation>()
+					.ShowGenericMessage(message, new Action(() => { }));
+			}
 		}
 	}
 }
