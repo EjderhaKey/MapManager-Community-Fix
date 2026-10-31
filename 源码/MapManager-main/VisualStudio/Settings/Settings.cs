@@ -8,6 +8,14 @@ namespace MapManager
 		Chinese
 	}
 
+	internal enum PlayerArrowColor
+	{
+		Red,
+		Black,
+		Gray,
+		Navy
+	}
+
 	internal class Settings : JsonModSettings
 	{
 		internal static Settings Instance { get; } = new();
@@ -23,6 +31,14 @@ namespace MapManager
 		[Name("Enable Map Arrow")]
 		[Description("If enabled, will show where the player is on the map with an arrow")]
 		public bool EnableArrow                 = false;
+
+		[Name("Player Arrow Size")]
+		[Slider(8f, 28f, NumberFormat = "{0:F0}")]
+		public float PlayerArrowSize = 16f;
+
+		[Name("Player Arrow Color")]
+		[Choice("Red", "Black", "Gray (#666666)", "Navy (#183060)")]
+		public PlayerArrowColor PlayerArrowColor = PlayerArrowColor.Red;
 
 		[Name("Center on the player")]
 		[Description("If enabled, will center on where the player is on the map")]

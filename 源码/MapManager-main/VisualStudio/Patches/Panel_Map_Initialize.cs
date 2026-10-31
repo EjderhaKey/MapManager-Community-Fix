@@ -6,6 +6,9 @@
         private static Panel_Map pendingPanel;
         private static int framesUntilCheck;
         private static int checkStage;
+        private static Texture2D playerArrowTexture;
+        private static readonly float[] ArrowVerticesX = { 2f, 15f, 15f, 30f, 15f, 15f, 2f };
+        private static readonly float[] ArrowVerticesY = { 11f, 11f, 4f, 16f, 28f, 21f, 21f };
 
         private static void Postfix(Panel_Map __instance, ref bool enable, ref bool cameFromDetailSurvey)
         {
@@ -85,54 +88,124 @@
         private static void EnsurePlayerArrow(Panel_Map panel)
         {
             Transform icon = panel.m_PlayerIcon;
-            if (icon == null || icon.Find("MapManagerPlayerArrow") != null)
+            if (icon == null)
                 return;
 
-            const int textureSize = 32;
-            Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false)
+            Transform arrowTransform = icon.Find("MapManagerPlayerArrow");
+            UITexture arrow;
+            UIWidget existingWidget = icon.GetComponent<UIWidget>();
+            if (arrowTransform == null)
             {
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            for (int y = 0; y < 32; y++)
+                GameObject arrowObject = new GameObject("MapManagerPlayerArrow");
+                arrowObject.transform.SetParent(icon, false);
+                arrow = arrowObject.AddComponent<UITexture>();
+                arrow.depth = existingWidget != null ? existingWidget.depth + 1 : 100;
+                MelonLogger.Msg("MapDiag fallback arrow created.");
+            }
+            else
             {
-                for (int x = 0; x < 32; x++)
+                arrow = arrowTransform.GetComponent<UITexture>();
+            }
+
+            if (arrow == null)
+                return;
+
+            if (playerArrowTexture == null)
+            {
+                playerArrowTexture = new Texture2D(32, 32, TextureFormat.RGBA32, false)
                 {
-                    // Draw a compact red triangle with a dark outline and a soft offset shadow.
-                    bool shadow = IsArrowTriangle(x - 1.0f, y + 1.0f, 3.0f, 28.0f, 9.5f);
-                    bool outline = IsArrowTriangle(x, y, 4.0f, 29.0f, 9.0f);
-                    bool fill = IsArrowTriangle(x, y, 5.0f, 27.5f, 6.6f);
-                    Color pixel = Color.clear;
-                    if (shadow)
-                        pixel = new Color(0f, 0f, 0f, 0.25f);
-                    if (outline)
-                        pixel = new Color(0.18f, 0.01f, 0.01f, 0.95f);
-                    if (fill)
-                        pixel = new Color(0.95f, 0.02f, 0.02f, 1f);
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp
+                };
+            }
+
+            UpdateArrowTexture(playerArrowTexture, GetArrowColor(Settings.Instance.PlayerArrowColor));
+            arrow.mainTexture = playerArrowTexture;
+            int size = Mathf.RoundToInt(Settings.Instance.PlayerArrowSize);
+            arrow.width = Mathf.RoundToInt(size * 1.15f);
+            arrow.height = size;
+        }
+
+        private static Color GetArrowColor(PlayerArrowColor color)
+        {
+            switch (color)
+            {
+                case PlayerArrowColor.Black:
+                    return new Color(0.04f, 0.04f, 0.04f, 1f);
+                case PlayerArrowColor.Gray:
+                    return new Color(102f / 255f, 102f / 255f, 102f / 255f, 1f);
+                case PlayerArrowColor.Navy:
+                    return new Color(24f / 255f, 48f / 255f, 96f / 255f, 1f);
+                default:
+                    return new Color(0.92f, 0.025f, 0.025f, 1f);
+            }
+        }
+
+        private static void UpdateArrowTexture(Texture2D texture, Color fillColor)
+        {
+            for (int y = 0; y < texture.height; y++)
+            {
+                for (int x = 0; x < texture.width; x++)
+                {
+                    float fill = ShapeCoverage(x, y, 0f, 0f);
+                    float outline = 0f;
+                    for (int ox = -1; ox <= 1; ox++)
+                    {
+                        for (int oy = -1; oy <= 1; oy++)
+                            outline = Mathf.Max(outline, ShapeCoverage(x, y, ox * 1.1f, oy * 1.1f));
+                    }
+                    float shadow = ShapeCoverage(x, y, -1.1f, 1.1f);
+
+                    Color pixel = new Color(0f, 0f, 0f, shadow * 0.28f);
+                    pixel = Blend(pixel, Color.white, Mathf.Max(0f, outline - fill) * 0.95f);
+                    pixel = Blend(pixel, fillColor, fill);
                     texture.SetPixel(x, y, pixel);
                 }
             }
             texture.Apply();
-
-            GameObject arrowObject = new GameObject("MapManagerPlayerArrow");
-            arrowObject.transform.SetParent(icon, false);
-            UITexture arrow = arrowObject.AddComponent<UITexture>();
-            arrow.mainTexture = texture;
-            arrow.width = 10;
-            arrow.height = 10;
-            UIWidget existingWidget = icon.GetComponent<UIWidget>();
-            arrow.depth = existingWidget != null ? existingWidget.depth + 1 : 100;
-            MelonLogger.Msg("MapDiag fallback arrow created.");
         }
 
-        private static bool IsArrowTriangle(float x, float y, float baseY, float tipY, float baseHalfWidth)
+        private static float ShapeCoverage(int x, int y, float offsetX, float offsetY)
         {
-            if (y < baseY || y > tipY)
-                return false;
+            int inside = 0;
+            for (int sx = 0; sx < 4; sx++)
+            {
+                for (int sy = 0; sy < 4; sy++)
+                {
+                    float px = x + (sx + 0.5f) * 0.25f + offsetX;
+                    float py = y + (sy + 0.5f) * 0.25f + offsetY;
+                    if (IsArrowShape(px, py))
+                        inside++;
+                }
+            }
+            return inside / 16f;
+        }
 
-            float progress = (tipY - y) / (tipY - baseY);
-            float halfWidth = 0.65f + baseHalfWidth * progress;
-            return System.Math.Abs(x - 15.5f) <= halfWidth;
+        private static bool IsArrowShape(float x, float y)
+        {
+            // Right-facing arrowhead with a broad shaft, matching the ➤ silhouette.
+            bool inside = false;
+            for (int i = 0, j = ArrowVerticesX.Length - 1; i < ArrowVerticesX.Length; j = i++)
+            {
+                bool crosses = (ArrowVerticesY[i] > y) != (ArrowVerticesY[j] > y) &&
+                    x < (ArrowVerticesX[j] - ArrowVerticesX[i]) * (y - ArrowVerticesY[i]) /
+                    (ArrowVerticesY[j] - ArrowVerticesY[i]) + ArrowVerticesX[i];
+                if (crosses)
+                    inside = !inside;
+            }
+            return inside;
+        }
+
+        private static Color Blend(Color background, Color foreground, float opacity)
+        {
+            float alpha = Mathf.Clamp01(opacity);
+            float resultAlpha = alpha + background.a * (1f - alpha);
+            if (resultAlpha <= 0f)
+                return Color.clear;
+
+            Color result = (foreground * alpha + background * (background.a * (1f - alpha))) / resultAlpha;
+            result.a = resultAlpha;
+            return result;
         }
     }
 }

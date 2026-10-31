@@ -14,6 +14,12 @@ namespace MapManager
 			["Map Settings"] = "地图设置",
 			["Enable Map Arrow"] = "显示玩家位置箭头",
 			["If enabled, will show where the player is on the map with an arrow"] = "开启后，在地图上显示玩家位置箭头。",
+			["Player Arrow Size"] = "玩家箭头大小",
+			["Player Arrow Color"] = "玩家箭头颜色",
+			["Red"] = "红色",
+			["Black"] = "黑色",
+			["Gray (#666666)"] = "灰色（#666666）",
+			["Navy (#183060)"] = "藏青（#183060）",
 			["Center on the player"] = "地图以玩家为中心",
 			["If enabled, will center on where the player is on the map"] = "开启后，打开地图时以玩家位置为中心。",
 			["BETA: Reveal The map"] = "测试：揭示地图",
@@ -62,5 +68,18 @@ namespace MapManager
 	internal static class SectionAttribute_GetTitle_Localize
 	{
 		private static void Postfix(ref string __result) => __result = SettingsLocalization.Translate(__result);
+	}
+
+	[HarmonyPatch(typeof(ChoiceAttribute), "get_Names")]
+	internal static class ChoiceAttribute_GetNames_Localize
+	{
+		private static void Postfix(ref string[] __result)
+		{
+			if (__result == null)
+				return;
+
+			for (int i = 0; i < __result.Length; i++)
+				__result[i] = SettingsLocalization.Translate(__result[i]);
+		}
 	}
 }
