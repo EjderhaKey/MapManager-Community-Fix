@@ -88,16 +88,28 @@
             if (icon == null || icon.Find("MapManagerPlayerArrow") != null)
                 return;
 
-            Texture2D texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+            const int textureSize = 32;
+            Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
             for (int y = 0; y < 32; y++)
             {
                 for (int x = 0; x < 32; x++)
                 {
-                    // Upward-pointing triangle with a notch at its base.
-                    bool inside = y >= 3 && y <= 29 &&
-                                  System.Math.Abs(x - 15.5f) <= (29 - y) * 0.48f + 1f &&
-                                  !(y < 12 && System.Math.Abs(x - 15.5f) < (12 - y) * 0.38f);
-                    texture.SetPixel(x, y, inside ? Color.red : Color.clear);
+                    // Draw a compact red triangle with a dark outline and a soft offset shadow.
+                    bool shadow = IsArrowTriangle(x - 1.0f, y + 1.0f, 3.0f, 28.0f, 9.5f);
+                    bool outline = IsArrowTriangle(x, y, 4.0f, 29.0f, 9.0f);
+                    bool fill = IsArrowTriangle(x, y, 5.0f, 27.5f, 6.6f);
+                    Color pixel = Color.clear;
+                    if (shadow)
+                        pixel = new Color(0f, 0f, 0f, 0.25f);
+                    if (outline)
+                        pixel = new Color(0.18f, 0.01f, 0.01f, 0.95f);
+                    if (fill)
+                        pixel = new Color(0.95f, 0.02f, 0.02f, 1f);
+                    texture.SetPixel(x, y, pixel);
                 }
             }
             texture.Apply();
@@ -106,11 +118,21 @@
             arrowObject.transform.SetParent(icon, false);
             UITexture arrow = arrowObject.AddComponent<UITexture>();
             arrow.mainTexture = texture;
-            arrow.width = 12;
-            arrow.height = 12;
+            arrow.width = 10;
+            arrow.height = 10;
             UIWidget existingWidget = icon.GetComponent<UIWidget>();
             arrow.depth = existingWidget != null ? existingWidget.depth + 1 : 100;
             MelonLogger.Msg("MapDiag fallback arrow created.");
+        }
+
+        private static bool IsArrowTriangle(float x, float y, float baseY, float tipY, float baseHalfWidth)
+        {
+            if (y < baseY || y > tipY)
+                return false;
+
+            float progress = (tipY - y) / (tipY - baseY);
+            float halfWidth = 0.65f + baseHalfWidth * progress;
+            return System.Math.Abs(x - 15.5f) <= halfWidth;
         }
     }
 }
