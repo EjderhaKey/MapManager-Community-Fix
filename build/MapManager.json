@@ -1,0 +1,14 @@
+{
+	"Language": "Chinese",
+	"EnableArrow": true,
+	"CenterOnPlayer": true,
+	"RevealMap": "Slash",
+	"MapSurveyMult": 25,
+	"MapSurveyMultTime": 5,
+	"MapWithPolariods": false,
+	"RevealVista": false,
+	"UnlockSurvey": false,
+	"AddCorpseToMap": false,
+	"EnableCustomCarryWeight": false,
+	"CustomCarryWeightKG": 200
+}

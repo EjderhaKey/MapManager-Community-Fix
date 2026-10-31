@@ -2,11 +2,22 @@
 
 namespace MapManager
 {
+	internal enum DisplayLanguage
+	{
+		English,
+		Chinese
+	}
+
 	internal class Settings : JsonModSettings
 	{
 		internal static Settings Instance { get; } = new();
 
-		[Section("Main")]
+		[Section("Language Settings")]
+		[Name("Display Language")]
+		[Choice("English", "简体中文")]
+		public DisplayLanguage Language = DisplayLanguage.Chinese;
+
+		[Section("Map Settings")]
 		[Name("Enable Map Arrow")]
 		[Description("If enabled, will show where the player is on the map with an arrow")]
 		public bool EnableArrow                 = false;
@@ -46,11 +57,27 @@ namespace MapManager
 		[Description("")]
 		public bool AddCorpseToMap = false;
 
+		[Section("Carry Weight")]
+		[Name("Enable Custom Carry Weight")]
+		[Description("When enabled, sets the player's effective carry capacity to the selected value.")]
+		public bool EnableCustomCarryWeight = false;
+
+		[Name("Maximum Carry Weight (kg)")]
+		[Slider(1f, 999f, NumberFormat = "{0:F0}")]
+		public float CustomCarryWeightKG = 30f;
+
 
 		internal static void OnLoad()
 		{
 			Instance.AddToModSettings($"{BuildInfo.GUIName}");
 			Instance.RefreshGUI();
+		}
+
+		protected override void OnChange(FieldInfo field, object oldValue, object newValue)
+		{
+			base.OnChange(field, oldValue, newValue);
+			if (field.Name == nameof(Language))
+				RefreshGUI();
 		}
 	}
 }
