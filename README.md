@@ -20,13 +20,6 @@ Mod 支持官网：[https://tldmods.net/](https://tldmods.net/)
 2. 将这两个文件放置到游戏的模组安装目录中
 3. 如有需要，根据游戏版本安装对应的 BepInEx 插件加载器
 
-## 🧩 依赖
-
-- BepInEx - Valheim 模组加载框架
-- Valheim 游戏本体
-
-> 
-> ⚠️ 注：这里原文写的 Valheim 是截图原文，实际是《漫漫长夜 (The Long Dark)》，如果你需要修正，我可以帮你改掉
 
 ## ℹ️ 更多信息
 
