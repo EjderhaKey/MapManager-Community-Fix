@@ -80,32 +80,49 @@ namespace MapManager
     [HarmonyPatch(typeof(Encumber), nameof(Encumber.GetHourlyCalorieBurnFromWeight))]
     internal static class Encumber_LimitWeightCalorieBurn
     {
-        // Keep the weight-related hunger cost at no more than the normal 30 kg load.
-        private const float NormalCarryWeightKG = 30f;
-        private static bool loggedFirstCall;
-        private static bool loggedFirstLimit;
-
-        private static void Postfix(Encumber __instance, ref float __result)
+        private static void Postfix(ref float __result)
         {
             if (!Settings.Instance.EnableCustomCarryWeight)
                 return;
 
-            float maximumWeightBurn = Mathf.Max(0f, __instance.m_HourlyCalorieBurnPerKG * NormalCarryWeightKG);
-            if (!loggedFirstCall)
+            // Infinite carry must not add any extra hunger drain based on carried weight.
+            __result = 0f;
+        }
+    }
+
+    [HarmonyPatch(typeof(PlayerManager), nameof(PlayerManager.CalculateModifiedCalorieBurnRate), new Type[] { typeof(float) })]
+    internal static class PlayerManager_CalculateModifiedCalorieBurnRate
+    {
+        private static bool _loggedActive;
+
+        private static void Postfix(PlayerManager __instance, float baseBurnRate, ref float __result)
+        {
+            if (!Settings.Instance.EnableCustomCarryWeight)
+                return;
+
+            if (!_loggedActive)
             {
-                MelonLogger.Msg($"CarryDiag weight hunger: initial={__result:F2}/h, cap={maximumWeightBurn:F2}/h");
-                loggedFirstCall = true;
+                MelonLogger.Msg("[MapManager] Infinite carry calorie patch active.");
+                _loggedActive = true;
             }
 
-            if (__result > maximumWeightBurn)
+            // Rebuild the game's normal calorie rate without its carried-weight surcharge.
+            float rate = baseBurnRate;
+            if (GameManager.GetFreezingComponent().IsFreezing())
+                rate *= GameManager.GetFreezingComponent().m_CalorieBurnMultiplier;
+
+            if (__instance.PlayerIsSprinting() || __instance.PlayerIsWalking())
             {
-                if (!loggedFirstLimit)
+                float verticalVelocity = GameManager.GetVpFPSPlayer().Controller.Velocity.normalized.y;
+                if (verticalVelocity > 0.1f)
                 {
-                    MelonLogger.Msg($"CarryDiag weight hunger capped: {__result:F2}/h -> {maximumWeightBurn:F2}/h");
-                    loggedFirstLimit = true;
+                    float uphill = Mathf.Clamp((verticalVelocity - 0.1f) / 0.5f, 0f, 1f);
+                    rate *= Mathf.Lerp(1f, 1.5f, uphill);
                 }
-                __result = maximumWeightBurn;
             }
+
+            rate *= GameManager.GetExperienceModeManagerComponent().GetCalorieBurnScale();
+            __result = rate * GameManager.GetFeatEfficientMachine().ReduceCaloriesScale();
         }
     }
 }
